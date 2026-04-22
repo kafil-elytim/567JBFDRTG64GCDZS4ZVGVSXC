@@ -1,0 +1,7 @@
+services:
+  - type: web
+    runtime: docker
+    name: xr7
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
