@@ -119,8 +119,9 @@ func ipHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
+	renderURL := os.Getenv("RENDER_EXTERNAL_URL")
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"egress_ip":"` + string(body) + `"}`))
+	w.Write([]byte(`{"egress_ip":"` + string(body) + `","render_url":"` + renderURL + `"}`))
 }
 
 func main() {
