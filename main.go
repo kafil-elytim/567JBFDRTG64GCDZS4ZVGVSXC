@@ -119,7 +119,16 @@ func ipHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
+
 	renderURL := os.Getenv("RENDER_EXTERNAL_URL")
+	if renderURL == "" {
+		renderURL = os.Getenv("RENDER_SERVICE_URL")
+	}
+	if renderURL == "" {
+		host := r.Host
+		renderURL = "https://" + host
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"egress_ip":"` + string(body) + `","render_url":"` + renderURL + `"}`))
 }
