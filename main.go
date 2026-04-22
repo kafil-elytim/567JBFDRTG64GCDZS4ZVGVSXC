@@ -111,6 +111,18 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
+func ipHandler(w http.ResponseWriter, r *http.Request) {
+	resp, err := http.Get("https://api.ipify.org")
+	if err != nil {
+		w.Write([]byte(`{"error":"` + err.Error() + `"}`))
+		return
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"egress_ip":"` + string(body) + `"}`))
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -119,6 +131,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/ip", ipHandler)
 	mux.HandleFunc("/", proxyHandler)
 
 	server := &http.Server{
