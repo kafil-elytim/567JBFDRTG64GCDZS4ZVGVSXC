@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
+
+const registryURL = "https://ip-registry.lor-lord20.workers.dev/register"
 
 // Ultra-fast reverse proxy for LiteRouter API
 // Zero external dependencies — pure Go stdlib
@@ -133,7 +138,39 @@ func ipHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"egress_ip":"` + string(body) + `","render_url":"` + renderURL + `"}`))
 }
 
+func selfRegister() {
+	// Get egress IP
+	resp, err := http.Get("https://api.ipify.org")
+	if err != nil {
+		fmt.Println("[register] failed to get IP:", err)
+		return
+	}
+	defer resp.Body.Close()
+	ipBytes, _ := io.ReadAll(resp.Body)
+	ip := strings.TrimSpace(string(ipBytes))
+
+	// Get render URL
+	renderURL := os.Getenv("RENDER_EXTERNAL_URL")
+	if renderURL == "" {
+		renderURL = os.Getenv("RENDER_SERVICE_URL")
+	}
+
+	// Send to registry
+	payload := fmt.Sprintf(`{"ip":"%s","render_url":"%s"}`, ip, renderURL)
+	r, err := http.Post(registryURL, "application/json", bytes.NewBufferString(payload))
+	if err != nil {
+		fmt.Println("[register] failed to register:", err)
+		return
+	}
+	defer r.Body.Close()
+	body, _ := io.ReadAll(r.Body)
+	fmt.Printf("[register] IP=%s URL=%s Response=%s\n", ip, renderURL, string(body))
+}
+
 func main() {
+	// Auto-register on startup
+	go selfRegister()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "10000"
@@ -152,5 +189,6 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 	}
 
+	fmt.Println("[proxy] starting on port", port)
 	server.ListenAndServe()
 }
